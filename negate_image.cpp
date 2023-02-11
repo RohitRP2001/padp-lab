@@ -1,60 +1,45 @@
-#include <stdio.h>
-#include <gd.h>
-#include <error.h>
-#include <omp.h>
-int main(int argc, char *argv[])
-{
-	int nt = 4;
-	int tid,tmp,red,green,blue,color,x,h,y,w;
-	tmp=red=green=blue=color=x=h=y=w=0;
-	char *iname =NULL;
-	char *oname = NULL;
-	gdImagePtr img;
-	FILE *fp={0};
-	if(argc!=3)
-		error(1,0,"format : object_file input.png output.png");
-	else
-	{
-		iname = argv[1];
-		oname = argv[2];
-	}	
-	if((fp=fopen(iname,"r"))==NULL)
-		error(1,0,"error : fopen : %s",iname);
-	else
-	{
-		img = gdImageCreateFromPng(fp);
-		w=gdImageSX(img);
-		h=gdImageSY(img);
-	}
-	double t=omp_get_wtime();
-	omp_set_num_threads(nt);
-	#pragma omp parallel for private(y,color,red,blue,green) schedule(static,50)
-	for(x=0;x<w;x++)
-		for(y=0;y<h;y++)
-		{
-			tid= omp_get_thread_num();
+#include <iostream>
+#include <gd.h>  // include the gd library header
+#include <omp.h> // include the OpenMP library header
 
-			color=gdImageGetPixel(img,x,y);
-			red=gdImageRed(img,color);
-			green=gdImageGreen(img,color);
-			blue=gdImageBlue(img,color);
-			tmp=(red+green+blue)/3;
-			
-			{
-		color=gdImageColorAllocate(img,tmp, tmp, tmp);
-				gdImageSetPixel(img,x,y,color);
-			}	
-			
-		}	
-	t=omp_get_wtime()-t;
-	printf("\ntime taken : %lf threads : %d",t,nt);
-	if((fp=fopen(oname,"w"))==NULL)
-		error(1,0,"error : fopen : %s",oname);
-	else
-	{
-		gdImagePng(img,fp);
-		fclose(fp);
-	}	
-	gdImageDestroy(img);
-	return 0;
+int main()
+{
+  gdImagePtr im;   // declare an image pointer
+  int color, x, y; // declare variables to store the color, x and y coordinates of the image
+
+FILE *fp.*fptr;
+	fp=fopen("mario.png","r");
+  // read the image and store it in the im pointer
+  im = gdImageCreateFromPng(fp);
+
+  // get the size of the image
+  int width = gdImageSX(im);
+  int height = gdImageSY(im);
+
+  // parallelize the for loop using OpenMP
+  #pragma omp parallel for private(color, x, y)
+  for (x = 0; x < width; x++)
+  {
+    for (y = 0; y < height; y++)
+    {
+      // get the color of the current pixel
+      color = gdImageGetPixel(im, x, y);
+
+      // convert the color to grayscale by taking the average of red, green, and blue components
+      int gray = (gdImageRed(im, color) + gdImageGreen(im, color) + gdImageBlue(im, color)) / 3;
+
+      // set the pixel color to the grayscale value
+      gdImageSetPixel(im, x, y, gdImageColorAllocate(im, gray, gray, gray));
+    }
+  }
+	
+fptr=fopen("outputt.png","w");
+	
+  // save the converted image
+  gdImagePng(im, fptr);
+
+  // free the memory used by the image
+  gdImageDestroy(im);
+
+  return 0;
 }
