@@ -1,60 +1,60 @@
+#include <stdio.h>
 #include <gd.h>
-#include <iostream>
+#include <error.h>
 #include <omp.h>
-
-using namespace std;
-
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
-    // Check if the input image file is provided
-    if (argc != 2) {
-        cout << "Usage: " << argv[0] << " <input_image>" << endl;
-        return 1;
-    }
+	int nt = 4;
+	int tid,tmp,red,green,blue,color,x,h,y,w;
+	tmp=red=green=blue=color=x=h=y=w=0;
+	char *iname =NULL;
+	char *oname = NULL;
+	gdImagePtr img;
+	FILE *fp={0};
+	if(argc!=3)
+		error(1,0,"format : object_file input.png output.png");
+	else
+	{
+		iname = argv[1];
+		oname = argv[2];
+	}	
+	if((fp=fopen(iname,"r"))==NULL)
+		error(1,0,"error : fopen : %s",iname);
+	else
+	{
+		img = gdImageCreateFromPng(fp);
+		w=gdImageSX(img);
+		h=gdImageSY(img);
+	}
+	double t=omp_get_wtime();
+	omp_set_num_threads(nt);
+	#pragma omp parallel for private(y,color,red,blue,green) schedule(static,50)
+	for(x=0;x<w;x++)
+		for(y=0;y<h;y++)
+		{
+			tid= omp_get_thread_num();
 
-    // Open the input image file
-    FILE* in_file = fopen(argv[1], "rb");
-    // Load the input image
-    gdImagePtr in_image = gdImageCreateFromPng(in_file);
-    // Close the input image file
-    fclose(in_file);
-
-    // Get the dimensions of the input image
-    int width = gdImageSX(in_image);
-    int height = gdImageSY(in_image);
-    // Create a new image for the black and white image
-    gdImagePtr bw_image = gdImageCreate(width, height);
-
-    // Set the number of threads to the number of processors on the system
-    int num_threads = omp_get_num_procs();
-    omp_set_num_threads(num_threads);
-
-    // Parallelize the loop that converts the image to black and white
-    #pragma omp parallel for
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            // Get the color of the current pixel
-            int color = gdImageGetPixel(in_image, x, y);
-            // Get the red, green, and blue components of the color
-            int red = gdImageRed(in_image, color);
-            int green = gdImageGreen(in_image, color);
-            int blue = gdImageBlue(in_image, color);
-            // Calculate the average (gray) value
-            int gray = (red + green + blue) / 3;
-            // Set the pixel in the black and white image to the gray value
-            gdImageSetPixel(bw_image, x, y, gdImageColorAllocate(bw_image, gray, gray, gray));
-        }
-    }
-
-    // Open the output image file
-    FILE* out_file = fopen("bw_image.png", "wb");
-    // Write the black and white image to the file
-    gdImagePng(bw_image, out_file);
-    // Close the output image file
-    fclose(out_file);
-
-    // Free the memory used by the input and output images
-    gdImageDestroy(in_image);
-    gdImageDestroy(bw_image);
-    return 0;
+			color=gdImageGetPixel(img,x,y);
+			red=gdImageRed(img,color);
+			green=gdImageGreen(img,color);
+			blue=gdImageBlue(img,color);
+			tmp=(red+green+blue)/3;
+			
+			{
+		color=gdImageColorAllocate(img,tmp, tmp, tmp);
+				gdImageSetPixel(img,x,y,color);
+			}	
+			
+		}	
+	t=omp_get_wtime()-t;
+	printf("\ntime taken : %lf threads : %d",t,nt);
+	if((fp=fopen(oname,"w"))==NULL)
+		error(1,0,"error : fopen : %s",oname);
+	else
+	{
+		gdImagePng(img,fp);
+		fclose(fp);
+	}	
+	gdImageDestroy(img);
+	return 0;
 }
